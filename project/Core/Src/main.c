@@ -43,7 +43,8 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint32_t left_toggles = 0;
+uint32_t right_toggles = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,6 +58,70 @@ static void MX_USART2_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(GPIO_Pin);
+
+  if (GPIO_Pin == S1_Pin) {
+	  HAL_UART_Transmit(&huart2, "S1\r\n", 4, 10);
+	  left_toggles = 6;
+
+  } else if (GPIO_Pin == S2_Pin) {
+	  HAL_UART_Transmit(&huart2, "S2\r\n", 4, 10);
+	  right_toggles = 6;
+
+  } else if (GPIO_Pin == S3_Pin){
+	  HAL_UART_Transmit(&huart2, "S3\r\n", 4, 10);
+  }
+}
+
+void heartbeat(void) {
+	static uint32_t heartbeat_tick = 0;
+	if (heartbeat_tick < HAL_GetTick()) {
+		heartbeat_tick = HAL_GetTick() + 500;
+		HAL_GPIO_TogglePin(D1_GPIO_Port, D1_Pin);
+	}
+}
+
+void turn_signal_left(void) {
+	static uint32_t turn_toggle_tick = 0;
+	if ((turn_toggle_tick < HAL_GetTick())) {
+		if (left_toggles > 0){
+			turn_toggle_tick = HAL_GetTick() + 500;
+			HAL_GPIO_TogglePin(D3_GPIO_Port, D3_Pin);
+			right_toggles = 0;
+			left_toggles--;
+		} else {
+			HAL_GPIO_WritePin(D3_GPIO_Port, D3_Pin, 1);
+		}
+	}
+}
+
+void turn_signal_right(void) {
+	static uint32_t turn_toggle_tick = 0;
+	if ((turn_toggle_tick < HAL_GetTick())) {
+		if (right_toggles > 0){
+			turn_toggle_tick = HAL_GetTick() + 500;
+			HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
+			left_toggles = 0;
+			right_toggles--;
+		} else {
+			HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, 1);
+		}
+	}
+}
+
+void turn_signal_hazard(void) {
+	static uint32_t turn_toggle_tick = 0;
+	if ((turn_toggle_tick < HAL_GetTick())) {
+		turn_toggle_tick = HAL_GetTick() + 500;
+		HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
+		HAL_GPIO_TogglePin(D3_GPIO_Port, D3_Pin);
+		left_toggles = 0;
+		right_toggles = 0;
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -96,6 +161,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	 heartbeat();
+	 turn_signal_left();
+	 turn_signal_right();
+	 turn_signal_hazard();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
