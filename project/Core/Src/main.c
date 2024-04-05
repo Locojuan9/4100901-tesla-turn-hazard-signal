@@ -48,6 +48,7 @@ uint32_t left_last_press_tick = 0;
 uint32_t right_toggles = 0;
 uint32_t right_last_press_tick = 0;
 uint32_t hazard_toggles = 0;
+uint8_t hazard_on = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -89,7 +90,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		right_toggles = 0;
 		left_toggles = 0;
 		HAL_UART_Transmit(&huart2, "Hazard Light\r\n", 14, 10);
-		hazard_toggles = 0xFFFFFF;
+		if (hazard_on == 0) {
+			hazard_toggles = 0xFFFFFF;
+			hazard_on = 1;
+		} else if (hazard_on == 1) {
+			hazard_toggles = 0;
+			hazard_on = 0;
+		}
 	}
 }
 
