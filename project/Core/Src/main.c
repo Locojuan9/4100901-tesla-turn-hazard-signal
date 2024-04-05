@@ -45,8 +45,10 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 uint32_t left_toggles = 0;
 uint32_t left_last_press_tick = 0;
+
 uint32_t right_toggles = 0;
 uint32_t right_last_press_tick = 0;
+
 uint32_t hazard_toggles = 0;
 uint8_t hazard_on = 0;
 /* USER CODE END PV */
@@ -65,26 +67,40 @@ static void MX_USART2_UART_Init(void);
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == S1_Pin) {
-		right_toggles = 0;
-		hazard_toggles = 0;
-		HAL_UART_Transmit(&huart2, "Turning Left\r\n", 14, 10);
-		if (HAL_GetTick() < (left_last_press_tick + 300)) { // if last press was in the last 300ms
-			left_toggles = 0xFFFFFF; // a long time toggling (infinite)
+		if (right_toggles > 0) {
+			HAL_UART_Transmit(&huart2, "Turning off right turn\r\n", 24, 10);
+			right_toggles = 0;
+		} else if (hazard_toggles > 0) {
+				HAL_UART_Transmit(&huart2, "Hazard light is active\r\n", 24, 10);
 		} else {
-			left_toggles = 6;
+			right_toggles = 0;
+			hazard_toggles = 0;
+			HAL_UART_Transmit(&huart2, "Turning Left\r\n", 14, 10);
+			if (HAL_GetTick() < (left_last_press_tick + 300)) { // if last press was in the last 300ms
+				left_toggles = 0xFFFFFF; // a long time toggling (infinite)
+			} else {
+				left_toggles = 6;
+			}
+			left_last_press_tick = HAL_GetTick();
 		}
-		left_last_press_tick = HAL_GetTick();
 
 	} else if (GPIO_Pin == S2_Pin) {
-		left_toggles = 0;
-		hazard_toggles = 0;
-		HAL_UART_Transmit(&huart2, "Turning Right\r\n", 15, 10);
-		if (HAL_GetTick() < (right_last_press_tick + 300)) { // if last press was in the last 300ms
-			right_toggles = 0xFFFFFF; // a long time toggling (infinite)
+		if (left_toggles > 0) {
+			HAL_UART_Transmit(&huart2, "Turning off left turn\r\n", 23, 10);
+			left_toggles = 0;
+		} else if (hazard_toggles > 0) {
+			HAL_UART_Transmit(&huart2, "Hazard light is active\r\n", 24, 10);
 		} else {
-			right_toggles = 6;
+			left_toggles = 0;
+			hazard_toggles = 0;
+			HAL_UART_Transmit(&huart2, "Turning Right\r\n", 15, 10);
+			if (HAL_GetTick() < (right_last_press_tick + 300)) { // if last press was in the last 300ms
+				right_toggles = 0xFFFFFF; // a long time toggling (infinite)
+			} else {
+				right_toggles = 6;
+			}
+			right_last_press_tick = HAL_GetTick();
 		}
-		right_last_press_tick = HAL_GetTick();
 
 	} else if (GPIO_Pin == S3_Pin) {
 		right_toggles = 0;
