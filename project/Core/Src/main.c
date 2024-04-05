@@ -65,6 +65,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == S1_Pin) {
 		right_toggles = 0;
+		hazard_toggles = 0;
 		HAL_UART_Transmit(&huart2, "Turning Left\r\n", 14, 10);
 		if (HAL_GetTick() < (left_last_press_tick + 300)) { // if last press was in the last 300ms
 			left_toggles = 0xFFFFFF; // a long time toggling (infinite)
@@ -75,6 +76,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 	} else if (GPIO_Pin == S2_Pin) {
 		left_toggles = 0;
+		hazard_toggles = 0;
 		HAL_UART_Transmit(&huart2, "Turning Right\r\n", 15, 10);
 		if (HAL_GetTick() < (right_last_press_tick + 300)) { // if last press was in the last 300ms
 			right_toggles = 0xFFFFFF; // a long time toggling (infinite)
@@ -108,7 +110,7 @@ void turn_signal_left(void)
 			turn_toggle_tick = HAL_GetTick() + 500;
 			HAL_GPIO_TogglePin(D3_GPIO_Port, D3_Pin);
 			left_toggles--;
-		} else {
+		} else if (hazard_toggles == 0) {
 			HAL_GPIO_WritePin(D3_GPIO_Port, D3_Pin, 1);
 		}
 
@@ -123,7 +125,7 @@ void turn_signal_right(void)
 			turn_toggle_tick = HAL_GetTick() + 500;
 			HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
 			right_toggles--;
-		} else {
+		} else if (hazard_toggles == 0) {
 			HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, 1);
 		}
 
@@ -138,12 +140,7 @@ void turn_signal_hazard(void)
 			turn_toggle_tick = HAL_GetTick() + 500;
 			HAL_GPIO_TogglePin(D3_GPIO_Port, D3_Pin);
 			HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
-			hazard_toggles--;
-		} else {
-			HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, 1);
-			HAL_GPIO_WritePin(D3_GPIO_Port, D3_Pin, 1);
 		}
-
 	}
 }
 
