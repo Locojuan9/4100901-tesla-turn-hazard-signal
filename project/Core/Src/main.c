@@ -43,6 +43,8 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+
+// System State Control Variables
 uint32_t left_toggles = 0;
 uint32_t left_last_press_tick = 0;
 
@@ -51,6 +53,7 @@ uint32_t right_last_press_tick = 0;
 
 uint32_t hazard_toggles = 0;
 uint8_t hazard_on = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,14 +67,18 @@ static void MX_USART2_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+// Function that allows attend to system interruptions
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+	// Check the GPIO that performed the interrupt
 	if (GPIO_Pin == S1_Pin) {
-		if (right_toggles > 0) {
+		if (right_toggles > 0) { // If the right turn signal was active, it turns off
 			HAL_UART_Transmit(&huart2, "Turning off right turn\r\n", 24, 10);
 			right_toggles = 0;
-		} else if (hazard_toggles > 0) {
+
+		} else if (hazard_toggles > 0) { // If the stationary lights are active, the interruption is ignored
 				HAL_UART_Transmit(&huart2, "Hazard light is active\r\n", 24, 10);
+
 		} else {
 			right_toggles = 0;
 			hazard_toggles = 0;
@@ -79,17 +86,19 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			if (HAL_GetTick() < (left_last_press_tick + 300)) { // if last press was in the last 300ms
 				left_toggles = 0xFFFFFF; // a long time toggling (infinite)
 			} else {
-				left_toggles = 6;
+				left_toggles = 6; // 3 times toggling
 			}
-			left_last_press_tick = HAL_GetTick();
+			left_last_press_tick = HAL_GetTick(); // Update ticks
 		}
 
 	} else if (GPIO_Pin == S2_Pin) {
-		if (left_toggles > 0) {
+		if (left_toggles > 0) { // If the left turn signal was active, it turns off
 			HAL_UART_Transmit(&huart2, "Turning off left turn\r\n", 23, 10);
 			left_toggles = 0;
-		} else if (hazard_toggles > 0) {
+
+		} else if (hazard_toggles > 0) { // If the stationary lights are active, the interruption is ignored
 			HAL_UART_Transmit(&huart2, "Hazard light is active\r\n", 24, 10);
+
 		} else {
 			left_toggles = 0;
 			hazard_toggles = 0;
@@ -97,70 +106,79 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			if (HAL_GetTick() < (right_last_press_tick + 300)) { // if last press was in the last 300ms
 				right_toggles = 0xFFFFFF; // a long time toggling (infinite)
 			} else {
-				right_toggles = 6;
+				right_toggles = 6; // 3 times toggling
 			}
-			right_last_press_tick = HAL_GetTick();
+			right_last_press_tick = HAL_GetTick(); // Update ticks
 		}
 
 	} else if (GPIO_Pin == S3_Pin) {
 		right_toggles = 0;
 		left_toggles = 0;
 		HAL_UART_Transmit(&huart2, "Hazard Light\r\n", 14, 10);
+
+		// On and off control of stationary lights
 		if (hazard_on == 0) {
-			hazard_toggles = 0xFFFFFF;
-			hazard_on = 1;
+			hazard_toggles = 0xFFFFFF; // a long time toggling (infinite)
+			hazard_on = 1; // Hazard is now active
+
 		} else if (hazard_on == 1) {
 			hazard_toggles = 0;
-			hazard_on = 0;
+			hazard_on = 0; // Hazard is now inactive
 		}
 	}
 }
 
+// Heartbeat function for system monitoring
 void heartbeat(void)
 {
 	static uint32_t heartbeat_tick = 0;
-	if (heartbeat_tick < HAL_GetTick()) {
-		heartbeat_tick = HAL_GetTick() + 500;
+	if (heartbeat_tick < HAL_GetTick()) { // Toggle every 500ms
+		heartbeat_tick = HAL_GetTick() + 500; // "Checkpoint" for the 500ms toggle
 		HAL_GPIO_TogglePin(D1_GPIO_Port, D1_Pin);
 	}
 }
 
+// Left turn signal function
 void turn_signal_left(void)
 {
 	static uint32_t turn_toggle_tick = 0;
 	if (turn_toggle_tick < HAL_GetTick()) {
-		if (left_toggles > 0) {
+		if (left_toggles > 0) { // Toggles while the turn signal is active
 			turn_toggle_tick = HAL_GetTick() + 500;
 			HAL_GPIO_TogglePin(D3_GPIO_Port, D3_Pin);
-			left_toggles--;
-		} else if (hazard_toggles == 0) {
+			left_toggles--; // 1 toggle complete
+
+		} else if (hazard_toggles == 0) { // Check that the hazard light is not active and turn off the turn signal
 			HAL_GPIO_WritePin(D3_GPIO_Port, D3_Pin, 1);
 		}
 
 	}
 }
 
+// Right turn signal function
 void turn_signal_right(void)
 {
 	static uint32_t turn_toggle_tick = 0;
 	if (turn_toggle_tick < HAL_GetTick()) {
-		if (right_toggles > 0) {
+		if (right_toggles > 0) { // Toggles while the turn signal is active
 			turn_toggle_tick = HAL_GetTick() + 500;
 			HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
-			right_toggles--;
-		} else if (hazard_toggles == 0) {
+			right_toggles--; // 1 toggle complete
+
+		} else if (hazard_toggles == 0) { // Check that the hazard light is not active and turn off the turn signal
 			HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, 1);
 		}
 
 	}
 }
 
+// Hazard lights signal function
 void turn_signal_hazard(void)
 {
 	static uint32_t turn_toggle_tick = 0;
-	if (turn_toggle_tick < HAL_GetTick()) {
+	if (turn_toggle_tick < HAL_GetTick()) { // Toggles both turn signals in 500ms intervals
 		if (hazard_toggles > 0) {
-			turn_toggle_tick = HAL_GetTick() + 500;
+			turn_toggle_tick = HAL_GetTick() + 500; // "Checkpoint" for the 500ms toggle
 			HAL_GPIO_TogglePin(D3_GPIO_Port, D3_Pin);
 			HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
 		}
@@ -206,6 +224,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	 // Activation functions are called infinitely
+	 // Activation functions will not work if interrupt conditions are not met
 	 heartbeat();
 	 turn_signal_left();
 	 turn_signal_right();
